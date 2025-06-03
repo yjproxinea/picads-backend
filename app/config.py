@@ -26,7 +26,14 @@ class Settings(BaseSettings):
     DBNAME: str = os.getenv("DBNAME", "")
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000", 
+        "http://localhost:8080",
+        "http://localhost:5173",  # Vite dev server default
+        "http://127.0.0.1:5173",  # Alternative localhost format
+        "http://localhost:4173",  # Vite preview server
+        "http://127.0.0.1:4173"   # Alternative localhost format
+    ]
     
     @property
     def DATABASE_URL(self) -> Optional[str]:

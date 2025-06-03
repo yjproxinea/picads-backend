@@ -25,7 +25,7 @@ class ProfileService:
         db_profile = Profile(
             id=user_uuid,
             full_name=profile_data.full_name,
-            credits=100,  # Default credits
+            credits=1000,  # Default credits - updated to 1000 as requested
             stripe_customer_id=None
         )
         db.add(db_profile)
