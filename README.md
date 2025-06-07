@@ -7,7 +7,7 @@ A FastAPI backend with Supabase authentication and PostgreSQL database integrati
 This backend is specifically designed to work with the **Picads.ai frontend** (`picadsv2/`):
 
 - **JWT Authentication**: Uses Supabase JWT tokens from frontend authentication
-- **Smart Profile Management**: Optimized GET/POST pattern for signin/signup flows  
+- **Smart Profile Management**: Optimized GET/POST pattern for signin/signup flows
 - **Credits System**: Provides 1000 default credits for new users
 - **CORS Configured**: Ready for frontend development on localhost:5173/5174
 - **Graceful Fallback**: Frontend works even if backend is temporarily unavailable
@@ -24,6 +24,7 @@ graph LR
 ```
 
 **Smart API Flow:**
+
 - **Existing Users**: Frontend calls `GET /profile` → Returns data
 - **New Users**: Frontend calls `GET /profile` → 404 → `POST /profile` → Creates profile
 - **Single Fetch**: Profiles fetched once per session (performance optimized)
@@ -70,12 +71,14 @@ backend/
 ## API Endpoints
 
 ### Public Endpoints
+
 - `GET /` - Welcome message
 - `GET /public-data` - Public data (works with or without auth)
 
 ### Authentication Required (Frontend Integration)
+
 - `GET /profile` - Get current user's profile (for existing users)
-- `POST /profile` - Create or get user profile (for new users)  
+- `POST /profile` - Create or get user profile (for new users)
 - `PUT /profile` - Update user profile
 - `GET /dashboard` - Protected dashboard with user info
 
@@ -91,10 +94,11 @@ The backend uses a smart `get_or_create_profile` pattern optimized for the front
 ## Database Schema
 
 ### Profile Model
+
 ```python
 class Profile(Base):
     __tablename__ = "profiles"
-    
+  
     id = Column(UUID, primary_key=True)  # Matches Supabase auth.users.id
     full_name = Column(String)
     credits = Column(Integer, default=1000)  # Updated from 100 to 1000
@@ -104,6 +108,7 @@ class Profile(Base):
 ```
 
 **Key Changes:**
+
 - ✅ Default credits increased to **1000** (from 100)
 - ✅ Optimized for frontend integration patterns
 - ✅ UUID primary key matches Supabase user IDs
@@ -146,6 +151,7 @@ cp env.example .env
 ```
 
 Edit `.env` with your actual values:
+
 ```env
 # Supabase Configuration
 SUPABASE_URL=your_supabase_project_url
@@ -164,6 +170,7 @@ DBNAME=your_db_name
 ```
 
 #### Getting Supabase Credentials:
+
 1. Go to your Supabase project dashboard
 2. **URL & Keys**: Settings > API > Project URL and anon public key
 3. **JWT Secret**: Settings > API > JWT Settings > JWT Secret
@@ -189,13 +196,14 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at:
+
 - **API**: http://localhost:8000
 - **Documentation**: http://localhost:8000/docs
 - **Alternative docs**: http://localhost:8000/redoc
 
 **Frontend Integration:**
+
 - The backend is configured with CORS to work with frontend on localhost:5173/5174
-- Start the frontend from `../picadsv2/` directory: `bun run dev` or `npm run dev`
 - Frontend will automatically connect to backend for profile management
 
 ### 5. Testing
@@ -207,6 +215,7 @@ python test_profile_flow.py
 ```
 
 This will test:
+
 - Public endpoints accessibility
 - Authentication flow with JWT tokens
 - Profile creation and management (1000 default credits)
@@ -270,31 +279,37 @@ curl -X GET "http://localhost:8000/dashboard" \
 ## Project Structure Explanation
 
 ### `app/database.py`
+
 - Async SQLAlchemy engine setup
 - Database session management
 - Connection pooling configuration (NullPool for testing compatibility)
 
 ### `app/models.py`
+
 - SQLAlchemy ORM models
 - Database table definitions
 - Relationships and constraints
 
 ### `app/schemas.py`
+
 - Pydantic models for API validation
 - Request/response serialization
 - Data transformation
 
 ### `app/services.py`
+
 - Business logic layer
 - Database operations
 - Profile management services
 
 ### `app/routes.py`
+
 - API endpoint definitions
 - Request handling
 - Authentication integration
 
 ### `app/auth.py`
+
 - JWT token validation
 - Supabase integration
 - User authentication utilities
@@ -302,6 +317,7 @@ curl -X GET "http://localhost:8000/dashboard" \
 ## Key Technical Decisions
 
 ### Async Database Operations
+
 The backend uses SQLAlchemy with async/await for non-blocking database operations:
 
 ```python
@@ -312,6 +328,7 @@ async def get_profile(db: AsyncSession, user_id: str) -> Optional[Profile]:
 ```
 
 ### Connection Pool Configuration
+
 Uses `NullPool` to prevent event loop conflicts, especially important for testing:
 
 ```python
@@ -323,6 +340,7 @@ engine = create_async_engine(
 ```
 
 ### Authentication Integration
+
 Seamlessly integrates with Supabase Auth while maintaining custom database models:
 
 ```python
@@ -344,6 +362,7 @@ class Profile(Base):
 ### Database Migrations
 
 For schema changes, you can:
+
 1. Update models in `app/models.py`
 2. Use Alembic for migrations (optional, for production)
 3. Or recreate tables for development
@@ -351,18 +370,21 @@ For schema changes, you can:
 ## Production Deployment
 
 ### Environment Configuration
+
 - Set proper DATABASE_URL for production PostgreSQL
 - Configure proper CORS origins
 - Use production-grade connection pooling (remove NullPool)
 - Set up proper logging and monitoring
 
 ### Database Considerations
+
 - Use connection pooling in production (remove `poolclass=NullPool`)
 - Set up database migrations with Alembic
 - Configure proper database backup and recovery
 - Monitor database performance
 
 ### Security
+
 - Rotate JWT secrets regularly
 - Use HTTPS in production
 - Configure Supabase RLS (Row Level Security) policies
@@ -381,6 +403,7 @@ docker run -p 8000:8000 --env-file .env picads-backend
 ## Troubleshooting
 
 ### Database Connection Issues
+
 ```bash
 # Verify DATABASE_URL format
 postgresql+asyncpg://user:password@host:port/database
@@ -390,17 +413,20 @@ postgresql+asyncpg://user:password@host:port/database
 ```
 
 ### Event Loop Errors
+
 The application uses `NullPool` to prevent "Future attached to a different loop" errors during testing. If you encounter these errors:
 
 1. Ensure `poolclass=NullPool` is set in `database.py`
 2. For production, consider using proper pooling with event loop management
 
 ### Authentication Issues
+
 1. Verify JWT secret matches Supabase project settings
 2. Check token expiration
 3. Ensure user exists in Supabase auth.users table
 
 ### Conda Environment Issues
+
 ```bash
 # Clean and recreate environment
 conda clean --all
@@ -413,19 +439,20 @@ conda env create -f environment.yml
 ### Complete Development Setup
 
 1. **Start Backend** (Terminal 1):
+
    ```bash
    cd backend
    conda activate picads-backend
    python main.py
    ```
-
 2. **Start Frontend** (Terminal 2):
+
    ```bash
    cd picadsv2
    bun run dev  # or npm run dev
    ```
-
 3. **Test Integration**:
+
    - Visit frontend at http://localhost:5173
    - Sign up with Google OAuth or email/password
    - Check dashboard for credits display (should show 1000 for new users)
@@ -436,6 +463,7 @@ conda env create -f environment.yml
 The backend is optimized for the frontend's specific patterns:
 
 **New User Signup Flow:**
+
 ```
 Frontend → Supabase Auth → Get JWT Token
 Frontend → GET /profile (with JWT) → 404 Not Found  
@@ -444,8 +472,63 @@ Frontend → Displays credits in dashboard
 ```
 
 **Existing User Signin Flow:**
+
 ```
 Frontend → Supabase Auth → Get JWT Token
 Frontend → GET /profile (with JWT) → Returns existing profile data
 Frontend → Displays credits in dashboard
-``` 
+```
+
+## Supabase Real-time Configuration
+
+For the signup completion flow to work with real-time notifications, you need to enable real-time on the profiles table:
+
+### 1. Enable Real-time for Profiles Table
+
+In your Supabase dashboard:
+1. Go to Database → Publications
+2. Create a new publication or edit the default `supabase_realtime`
+3. Add the `profiles` table to the publication
+4. Enable `INSERT` events
+
+Or run this SQL in the Supabase SQL editor:
+```sql
+-- Enable real-time for profiles table
+ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
+```
+
+### 2. Row Level Security (RLS) for Real-time
+
+Make sure users can only listen to their own profile changes:
+```sql
+-- Enable RLS on profiles table (if not already enabled)
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Allow users to read their own profiles
+CREATE POLICY "Users can read own profile" ON profiles
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Allow real-time subscriptions for own profile
+CREATE POLICY "Users can subscribe to own profile" ON profiles
+  FOR SELECT USING (auth.uid() = user_id);
+```
+
+### 3. Test Real-time Subscription
+
+You can test the real-time subscription in the browser console:
+```javascript
+// Subscribe to profile changes
+const subscription = supabase
+  .channel('test-profile')
+  .on('postgres_changes', {
+    event: 'INSERT',
+    schema: 'public', 
+    table: 'profiles',
+    filter: 'user_id=eq.YOUR_USER_ID'
+  }, (payload) => {
+    console.log('Profile created:', payload);
+  })
+  .subscribe();
+```
+
+This replaces the polling approach with instant notifications when the webhook creates the profile.
