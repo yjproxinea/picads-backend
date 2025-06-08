@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET")  # Optional for local dev
     STRIPE_PRICE_ID: str = os.getenv("STRIPE_PRICE_ID_SUBSCRIPTION", "")  # Single price ID for the subscription plan
     STRIPE_PRICE_ID_METERED: str = os.getenv("STRIPE_PRICE_ID_METERED", "")  # Single price ID for the credits plan
+    STRIPE_METER_NAME: str = os.getenv("STRIPE_METER_NAME", "credit_as_you_go")  # Meter name for credit overage billing
     
     # Frontend URL for redirects
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")

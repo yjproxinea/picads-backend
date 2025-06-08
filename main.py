@@ -23,4 +23,9 @@ app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(
+        "main:app",  # Correct import path for main.py in root directory
+        host="0.0.0.0", 
+        port=8000,
+        reload=True  # Enable auto-reload on code changes
+    ) 

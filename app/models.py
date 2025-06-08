@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from app.database import Base
-from sqlalchemy import DateTime, Integer, String, Text, func
+from sqlalchemy import ARRAY, DateTime, Integer, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -53,5 +53,5 @@ class UserAssets(Base):
     name: Mapped[str] = mapped_column(Text, nullable=True)
     size: Mapped[int] = mapped_column(Integer, nullable=True)
     mime_type: Mapped[str] = mapped_column(Text, nullable=True)
-    tags: Mapped[str] = mapped_column(Text, nullable=True)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
