@@ -75,10 +75,10 @@ class UsageLogResponse(BaseModel):
         from_attributes = True
 
 
-# User Assets Schemas
-class UserAssetCreate(BaseModel):
-    """Schema for creating a new user asset"""
-    asset_type: str
+# User Ads Schemas (for generated ads)
+class UserAdCreate(BaseModel):
+    """Schema for creating a new user ad"""
+    ad_type: str
     file_path: str
     name: Optional[str] = None
     size: Optional[int] = None
@@ -86,14 +86,51 @@ class UserAssetCreate(BaseModel):
     tags: Optional[str] = None
 
 
-class UserAssetUpdate(BaseModel):
-    """Schema for updating a user asset"""
-    asset_type: Optional[str] = None
+class UserAdUpdate(BaseModel):
+    """Schema for updating a user ad"""
+    ad_type: Optional[str] = None
     file_path: Optional[str] = None
     name: Optional[str] = None
     size: Optional[int] = None
     mime_type: Optional[str] = None
     tags: Optional[str] = None
+
+
+class UserAdResponse(BaseModel):
+    """Schema for user ad response"""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    ad_type: str
+    file_path: str
+    name: Optional[str] = None
+    size: Optional[int] = None
+    mime_type: Optional[str] = None
+    tags: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# User Assets Schemas (for user uploaded assets during onboarding)
+class UserAssetCreate(BaseModel):
+    """Schema for creating a new user asset"""
+    asset_type: str
+    file_path: str
+    original_filename: str
+    size: Optional[int] = None
+    mime_type: Optional[str] = None
+    description: Optional[str] = None
+
+
+class UserAssetUpdate(BaseModel):
+    """Schema for updating a user asset"""
+    asset_type: Optional[str] = None
+    file_path: Optional[str] = None
+    original_filename: Optional[str] = None
+    size: Optional[int] = None
+    mime_type: Optional[str] = None
+    description: Optional[str] = None
 
 
 class UserAssetResponse(BaseModel):
@@ -102,10 +139,10 @@ class UserAssetResponse(BaseModel):
     user_id: uuid.UUID
     asset_type: str
     file_path: str
-    name: Optional[str] = None
+    original_filename: str
     size: Optional[int] = None
     mime_type: Optional[str] = None
-    tags: Optional[str] = None
+    description: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -134,8 +171,8 @@ class AdGenerationResponse(BaseModel):
     success: bool
     message: str
     ad_type: str
-    asset_id: Optional[uuid.UUID] = None
-    asset_url: Optional[str] = None
+    ad_id: Optional[uuid.UUID] = None
+    ad_url: Optional[str] = None
     billing_info: BillingInfo
     usage_log_id: uuid.UUID
     generated_content: Optional[Dict[str, Any]] = None  # Placeholder for actual ad content

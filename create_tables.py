@@ -29,7 +29,7 @@ load_dotenv(env_path)
 # Import after loading env
 from app.config import settings
 from app.database import Base, engine
-from app.models import Credits, Profile, UsageLog, UserAssets
+from app.models import Credits, Profile, UsageLog, UserAds, UserAssets
 
 
 def mask_password(url):
@@ -133,9 +133,14 @@ async def setup_rls_policies(conn, schema: str):
             'description': 'Usage logs - users can only access their own usage history'
         },
         {
+            'name': 'user_ads',
+            'user_column': 'user_id',
+            'description': 'User ads - users can only access their own generated ads'
+        },
+        {
             'name': 'user_assets',
             'user_column': 'user_id',
-            'description': 'User assets - users can only access their own assets'
+            'description': 'User assets - users can only access their own uploaded assets'
         }
     ]
     
@@ -259,6 +264,7 @@ async def reset_database():
             # Drop tables in reverse order to handle dependencies
             tables_to_drop = [
                 'user_assets',
+                'user_ads',
                 'usage_logs', 
                 'credits',
                 'profiles'
@@ -287,6 +293,7 @@ async def reset_database():
             print(f"   - profiles (schema: {schema})")
             print(f"   - credits (schema: {schema})")
             print(f"   - usage_logs (schema: {schema})")
+            print(f"   - user_ads (schema: {schema})")
             print(f"   - user_assets (schema: {schema})")
             
             # Setup RLS if requested

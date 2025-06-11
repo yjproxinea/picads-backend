@@ -16,7 +16,7 @@ from app.config import (
     STRIPE_SECRET_KEY,
     settings,
 )
-from app.models import Credits, Profile, UsageLog, UserAssets
+from app.models import Credits, Profile, UsageLog, UserAds
 from app.schemas import (
     AdGenerationRequest,
     BillingInfo,
@@ -270,16 +270,16 @@ class AdGenerationService:
             # 7. Create usage log
             usage_log = await self._create_usage_log(user_id, request, credit_cost, billing_result)
             
-            # 8. Create user asset (placeholder)
-            asset = await self._create_user_asset(user_id, request.ad_type)
+            # 8. Create user ad (placeholder)
+            ad = await self._create_user_ad(user_id, request.ad_type)
             
             # 9. Prepare response
             response = {
                 "success": True,
                 "message": f"{request.ad_type.replace('_', ' ').title()} generated successfully",
                 "ad_type": request.ad_type,
-                "asset_id": asset.id,
-                "asset_url": f"{ASSETS_BASE_URL}/{asset.file_path}",
+                "ad_id": ad.id,
+                "ad_url": f"{ASSETS_BASE_URL}/{ad.file_path}",
                 "billing_info": BillingInfo(
                     credits_used=credit_cost,
                     metered_credits=billing_result.get("metered_credits")
@@ -373,13 +373,13 @@ class AdGenerationService:
         await self.db.refresh(usage_log)
         return usage_log
     
-    async def _create_user_asset(self, user_id: uuid.UUID, ad_type: str) -> UserAssets:
-        """Create a user asset record with placeholder data"""
+    async def _create_user_ad(self, user_id: uuid.UUID, ad_type: str) -> UserAds:
+        """Create a user ad record with placeholder data"""
         
         # Generate random file path and details
         random_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
         
-        asset_config = {
+        ad_config = {
             "text_ad": {
                 "file_path": f"text_ads/{random_id}.json",
                 "mime_type": "application/json",
@@ -400,22 +400,22 @@ class AdGenerationService:
             }
         }
         
-        config = asset_config.get(ad_type, asset_config["text_ad"])
+        config = ad_config.get(ad_type, ad_config["text_ad"])
         
-        asset = UserAssets(
+        ad = UserAds(
             user_id=user_id,
-            asset_type=ad_type,
+            ad_type=ad_type,
             file_path=config["file_path"],
             name=config["name"],
             size=config["size"],
             mime_type=config["mime_type"],
-            tags=[ad_type, "generated", "placeholder"]  # Send as array to match database text[]
+            tags=f"{ad_type},generated,placeholder"  # Store as comma-separated string
         )
         
-        self.db.add(asset)
+        self.db.add(ad)
         await self.db.commit()
-        await self.db.refresh(asset)
-        return asset
+        await self.db.refresh(ad)
+        return ad
     
     def _generate_ad_content(self, request: AdGenerationRequest) -> Dict[str, Any]:
         """Generate placeholder ad content (to be replaced with actual AI generation)"""

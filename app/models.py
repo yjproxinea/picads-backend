@@ -46,15 +46,29 @@ class UsageLog(Base):
     extra_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # JSONB in Supabase
 
 
-class UserAssets(Base):
-    __tablename__ = "user_assets"
+class UserAds(Base):
+    __tablename__ = "user_ads"
     __table_args__ = {'schema': schema}
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    asset_type: Mapped[str] = mapped_column(String, nullable=False)
+    ad_type: Mapped[str] = mapped_column(String, nullable=False)
     file_path: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
     mime_type: Mapped[str] = mapped_column(String, nullable=False)
     tags: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Text field, not array
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class UserAssets(Base):
+    __tablename__ = "user_assets"
+    __table_args__ = {'schema': schema}
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    asset_type: Mapped[str] = mapped_column(String, nullable=False)  # e.g., "logo", "image", "video", "document"
+    file_path: Mapped[str] = mapped_column(String, nullable=False)
+    original_filename: Mapped[str] = mapped_column(String, nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)

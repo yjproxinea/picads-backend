@@ -2,19 +2,33 @@ import uuid
 from typing import Any, Dict, Optional
 
 import stripe
-from app.auth import User, get_current_user, get_current_user_optional
-from app.config import settings
-from app.database import get_db
-from app.schemas import (AdGenerationRequest, AdGenerationResponse,
-                         ErrorResponse, InitSubscriptionRequest,
-                         InitSubscriptionResponse, ProfileCreate,
-                         ProfileResponse, ProfileUpdate, UsageLogResponse,
-                         UserAssetResponse)
-from app.services import (AdGenerationService, CreditsService, ProfileService,
-                          StripeService, get_user_credits_summary)
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth import User, get_current_user, get_current_user_optional
+from app.config import settings
+from app.database import get_db
+from app.schemas import (
+    AdGenerationRequest,
+    AdGenerationResponse,
+    ErrorResponse,
+    InitSubscriptionRequest,
+    InitSubscriptionResponse,
+    ProfileCreate,
+    ProfileResponse,
+    ProfileUpdate,
+    UsageLogResponse,
+    UserAdResponse,
+    UserAssetResponse,
+)
+from app.services import (
+    AdGenerationService,
+    CreditsService,
+    ProfileService,
+    StripeService,
+    get_user_credits_summary,
+)
 
 router = APIRouter()
 
@@ -239,6 +253,36 @@ async def get_usage_log(
     
     return [UsageLogResponse.model_validate(log) for log in usage_logs]
 
+@router.get("/ads")
+async def get_user_ads(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    ad_type: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0
+):
+    """Get user's generated ads with optional filtering by type"""
+    from sqlalchemy import select
+
+    from app.models import UserAds
+
+    # Convert user ID to UUID
+    user_uuid = uuid.UUID(current_user.id)
+    
+    query = select(UserAds).filter(UserAds.user_id == user_uuid)
+    
+    if ad_type:
+        query = query.filter(UserAds.ad_type == ad_type)
+    
+    result = await db.execute(
+        query.order_by(UserAds.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    ads = result.scalars().all()
+    
+    return [UserAdResponse.model_validate(ad) for ad in ads]
+
 @router.get("/assets")
 async def get_user_assets(
     current_user: User = Depends(get_current_user),
@@ -247,9 +291,10 @@ async def get_user_assets(
     limit: int = 50,
     offset: int = 0
 ):
-    """Get user's assets with optional filtering by type"""
-    from app.models import UserAssets
+    """Get user's uploaded assets with optional filtering by type"""
     from sqlalchemy import select
+
+    from app.models import UserAssets
 
     # Convert user ID to UUID
     user_uuid = uuid.UUID(current_user.id)
