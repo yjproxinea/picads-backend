@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import JSON, UUID, DateTime, Integer, String
+from sqlalchemy import JSON, UUID, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -72,3 +72,31 @@ class UserAssets(Base):
     mime_type: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class BrandIdentity(Base):
+    __tablename__ = "brand_identities"
+    __table_args__ = {'schema': schema}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    
+    # Basic Info
+    website_url: Mapped[str] = mapped_column(String, nullable=False)
+    company_name: Mapped[str] = mapped_column(String, nullable=False)
+    value_proposition: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    industry: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Preferences
+    ad_frequency: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    team_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    monthly_budget: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
+    # Arrays stored as JSON
+    brand_colors: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    preferred_fonts: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    platforms: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=datetime.utcnow)

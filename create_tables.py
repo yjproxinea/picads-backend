@@ -141,6 +141,11 @@ async def setup_rls_policies(conn, schema: str):
             'name': 'user_assets',
             'user_column': 'user_id',
             'description': 'User assets - users can only access their own uploaded assets'
+        },
+        {
+            'name': 'brand_identities',
+            'user_column': 'user_id',
+            'description': 'Brand identities - users can only access their own brand identities'
         }
     ]
     
@@ -267,7 +272,8 @@ async def reset_database():
                 'user_ads',
                 'usage_logs', 
                 'credits',
-                'profiles'
+                'profiles',
+                'brand_identities'
             ]
             
             for table in tables_to_drop:
@@ -295,7 +301,7 @@ async def reset_database():
             print(f"   - usage_logs (schema: {schema})")
             print(f"   - user_ads (schema: {schema})")
             print(f"   - user_assets (schema: {schema})")
-            
+            print(f"   - brand_identities (schema: {schema})")
             # Setup RLS if requested
             if args.enable_rls:
                 print("\n" + "=" * 60)
