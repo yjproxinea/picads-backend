@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -26,6 +27,15 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
     SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
+    SUPABASE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")  # Service role key for storage
+    SUPABASE_STORAGE_URL: Optional[str] = os.getenv("SUPABASE_STORAGE_URL")  # Optional override
+    
+    @property
+    def storage_url(self) -> str:
+        """Get the storage URL, constructing it from SUPABASE_URL if not explicitly set"""
+        if self.SUPABASE_STORAGE_URL:
+            return self.SUPABASE_STORAGE_URL
+        return f"{self.SUPABASE_URL}/storage/v1"
     
     # Stripe Configuration
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")

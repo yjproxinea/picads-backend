@@ -2,7 +2,7 @@ import random
 import string
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import stripe
 from sqlalchemy import select
@@ -16,13 +16,16 @@ from app.config import (
     STRIPE_SECRET_KEY,
     settings,
 )
-from app.models import Credits, Profile, UsageLog, UserAds
+from app.models import BrandIdentity, Credits, Profile, UsageLog, UserAds, UserAssets
 from app.schemas import (
     AdGenerationRequest,
     BillingInfo,
+    BrandIdentityCreate,
+    BrandIdentityUpdate,
     ErrorResponse,
     ProfileCreate,
     ProfileUpdate,
+    UserAssetCreate,
 )
 
 # Configure Stripe
@@ -470,4 +473,109 @@ async def get_user_credits_summary(db: AsyncSession, user_id: uuid.UUID) -> Dict
         "last_refill": credits.last_refill,
         "grace_until": credits.grace_until,
         "updated_at": credits.updated_at
-    } 
+    }
+
+
+class BrandIdentityService:
+    """Service class for handling brand identity operations"""
+    
+    @staticmethod
+    async def create_brand_identity(db: AsyncSession, user_id: uuid.UUID, brand_data: BrandIdentityCreate) -> BrandIdentity:
+        """Create a new brand identity record"""
+        db_brand = BrandIdentity(
+            user_id=user_id,
+            website_url=str(brand_data.website_url),
+            company_name=brand_data.company_name,
+            value_proposition=brand_data.value_proposition,
+            industry=brand_data.industry,
+            ad_frequency=brand_data.ad_frequency,
+            team_size=brand_data.team_size,
+            monthly_budget=brand_data.monthly_budget,
+            brand_colors=brand_data.brand_colors,
+            preferred_fonts=brand_data.preferred_fonts,
+            platforms=brand_data.platforms
+        )
+        
+        db.add(db_brand)
+        await db.commit()
+        await db.refresh(db_brand)
+        return db_brand
+
+    @staticmethod
+    async def get_brand_identity(db: AsyncSession, user_id: uuid.UUID) -> Optional[BrandIdentity]:
+        """Get brand identity by user ID"""
+        result = await db.execute(select(BrandIdentity).filter(BrandIdentity.user_id == user_id))
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def update_brand_identity(
+        db: AsyncSession, 
+        user_id: uuid.UUID, 
+        brand_data: BrandIdentityUpdate
+    ) -> Optional[BrandIdentity]:
+        """Update brand identity"""
+        result = await db.execute(select(BrandIdentity).filter(BrandIdentity.user_id == user_id))
+        db_brand = result.scalar_one_or_none()
+        
+        if not db_brand:
+            return None
+            
+        # Update fields if provided in brand_data
+        update_data = brand_data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            if field in ['brand_colors', 'preferred_fonts', 'platforms'] and value is not None:
+                setattr(db_brand, field, {field.split('_')[-1]: value})
+            else:
+                setattr(db_brand, field, value)
+        
+        await db.commit()
+        await db.refresh(db_brand)
+        return db_brand
+
+
+class AssetService:
+    """Service class for handling user assets"""
+    
+    @staticmethod
+    async def create_asset(
+        db: AsyncSession, 
+        user_id: uuid.UUID, 
+        asset_data: UserAssetCreate
+    ) -> UserAssets:
+        """Create a new user asset record"""
+        db_asset = UserAssets(
+            user_id=user_id,
+            asset_type=asset_data.asset_type,
+            file_path=asset_data.file_path,
+            original_filename=asset_data.original_filename,
+            size=asset_data.size,
+            mime_type=asset_data.mime_type,
+            description=asset_data.description
+        )
+        
+        db.add(db_asset)
+        await db.commit()
+        await db.refresh(db_asset)
+        return db_asset
+
+    @staticmethod
+    async def get_asset(db: AsyncSession, asset_id: uuid.UUID) -> Optional[UserAssets]:
+        """Get asset by ID"""
+        result = await db.execute(select(UserAssets).filter(UserAssets.id == asset_id))
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_user_assets(
+        db: AsyncSession, 
+        user_id: uuid.UUID, 
+        asset_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[UserAssets]:
+        """Get all assets for a user, optionally filtered by type"""
+        query = select(UserAssets).filter(UserAssets.user_id == user_id)
+        if asset_type:
+            query = query.filter(UserAssets.asset_type == asset_type)
+        query = query.limit(limit).offset(offset)
+        result = await db.execute(query)
+        return list(result.scalars().all()) 

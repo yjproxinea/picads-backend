@@ -1,8 +1,9 @@
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import stripe
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +13,9 @@ from app.database import get_db
 from app.schemas import (
     AdGenerationRequest,
     AdGenerationResponse,
+    BrandIdentityCreate,
+    BrandIdentityResponse,
+    BrandIdentityUpdate,
     ErrorResponse,
     InitSubscriptionRequest,
     InitSubscriptionResponse,
@@ -20,15 +24,19 @@ from app.schemas import (
     ProfileUpdate,
     UsageLogResponse,
     UserAdResponse,
+    UserAssetCreate,
     UserAssetResponse,
 )
 from app.services import (
     AdGenerationService,
+    AssetService,
+    BrandIdentityService,
     CreditsService,
     ProfileService,
     StripeService,
     get_user_credits_summary,
 )
+from app.storage import storage
 
 router = APIRouter()
 
@@ -481,4 +489,166 @@ async def dashboard(
             "available": credits.available_credits if credits else 0
         }
 
-    return response 
+    return response
+
+@router.post("/brand-identity", response_model=BrandIdentityResponse)
+async def create_brand_identity(
+    brand_data: BrandIdentityCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create brand identity for user"""
+    try:
+        brand = await BrandIdentityService.create_brand_identity(
+            db=db,
+            user_id=uuid.UUID(current_user.id),
+            brand_data=brand_data
+        )
+        return brand
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to create brand identity: {str(e)}"
+        )
+
+@router.get("/brand-identity", response_model=BrandIdentityResponse)
+async def get_brand_identity(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get user's brand identity"""
+    brand = await BrandIdentityService.get_brand_identity(
+        db=db, 
+        user_id=uuid.UUID(current_user.id)
+    )
+    if not brand:
+        raise HTTPException(status_code=404, detail="Brand identity not found")
+    return brand
+
+@router.put("/brand-identity", response_model=BrandIdentityResponse)
+async def update_brand_identity(
+    brand_data: BrandIdentityUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update brand identity"""
+    brand = await BrandIdentityService.update_brand_identity(
+        db=db,
+        user_id=uuid.UUID(current_user.id),
+        brand_data=brand_data
+    )
+    if not brand:
+        raise HTTPException(status_code=404, detail="Brand identity not found")
+    return brand
+
+@router.post("/assets/upload", response_model=UserAssetResponse)
+async def upload_asset(
+    file: UploadFile,
+    asset_type: str = Form(...),
+    description: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Upload a new asset"""
+    try:
+        print(f"[UPLOAD_ASSET] Starting upload process...")
+        print(f"[UPLOAD_ASSET] Received params: asset_type={asset_type}, description={description}")
+        print(f"[UPLOAD_ASSET] File info: name={file.filename}, content_type={file.content_type}, size={file.size}")
+        
+        if not file.filename:
+            print("[UPLOAD_ASSET] Error: No filename provided")
+            raise HTTPException(
+                status_code=400,
+                detail="No filename provided"
+            )
+            
+        # Generate unique filename
+        file_ext = file.filename.split('.')[-1]
+        unique_filename = f"{uuid.uuid4()}.{file_ext}"
+        file_path = f"assets/{current_user.id}/{asset_type}/{unique_filename}"
+        print(f"[UPLOAD_ASSET] Generated file path: {file_path}")
+        
+        # Upload file to storage
+        print("[UPLOAD_ASSET] Attempting to upload file to storage...")
+        file_url = await storage.upload_file(
+            file=file,
+            path=file_path,
+            bucket="assets"
+        )
+        
+        if not file_url:
+            print("[UPLOAD_ASSET] Error: Failed to get file URL from storage")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to upload file to storage"
+            )
+        
+        print(f"[UPLOAD_ASSET] File uploaded successfully, URL: {file_url}")
+        
+        # Create asset record
+        print("[UPLOAD_ASSET] Creating asset record in database...")
+        asset_data = UserAssetCreate(
+            asset_type=asset_type,
+            file_path=file_path,
+            original_filename=file.filename,
+            size=file.size or 0,  # Default to 0 if size is None
+            mime_type=file.content_type or 'application/octet-stream',  # Default if content_type is None
+            description=description
+        )
+        print(f"[UPLOAD_ASSET] Asset data prepared: {asset_data}")
+        
+        asset = await AssetService.create_asset(
+            db=db,
+            user_id=uuid.UUID(current_user.id),
+            asset_data=asset_data
+        )
+        print("[UPLOAD_ASSET] Asset record created successfully")
+        
+        return asset
+    except ValidationError as ve:
+        print(f"[UPLOAD_ASSET] Validation error: {str(ve)}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Validation error: {str(ve)}"
+        )
+    except Exception as e:
+        print(f"[UPLOAD_ASSET] Unexpected error: {str(e)}")
+        print(f"[UPLOAD_ASSET] Error type: {type(e)}")
+        import traceback
+        print(f"[UPLOAD_ASSET] Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to upload asset: {str(e)}"
+        )
+
+@router.get("/assets/{asset_id}", response_model=UserAssetResponse)
+async def get_asset(
+    asset_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get asset by ID"""
+    asset = await AssetService.get_asset(db=db, asset_id=asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    if asset.user_id != uuid.UUID(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to access this asset")
+    return asset
+
+@router.get("/assets", response_model=List[UserAssetResponse])
+async def list_assets(
+    asset_type: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """List user's assets"""
+    assets = await AssetService.get_user_assets(
+        db=db,
+        user_id=uuid.UUID(current_user.id),
+        asset_type=asset_type,
+        limit=limit,
+        offset=offset
+    )
+    return assets 

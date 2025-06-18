@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, HttpUrl, validator
@@ -14,24 +14,20 @@ class BrandIdentityCreate(BaseModel):
     ad_frequency: Optional[str] = None
     team_size: Optional[int] = None
     monthly_budget: Optional[int] = None
-    brand_colors: Optional[List[str]] = None
-    preferred_fonts: Optional[List[str]] = None
-    platforms: Optional[List[str]] = None
+    brand_colors: Optional[Dict[str, List[str]]] = None
+    preferred_fonts: Optional[Dict[str, List[str]]] = None
+    platforms: Optional[Dict[str, List[str]]] = None
 
-    @validator('ad_frequency')
-    def validate_ad_frequency(cls, v):
-        if v and v not in ['daily', 'weekly', 'biweekly', 'monthly']:
-            raise ValueError('Invalid ad frequency')
+    @validator('brand_colors', 'preferred_fonts', 'platforms')
+    def validate_nested_structure(cls, v):
+        if v is None:
+            return None
+        if not isinstance(v, dict):
+            raise ValueError("Must be a dictionary")
+        if 'colors' not in v and 'fonts' not in v and 'platforms' not in v:
+            raise ValueError("Must contain 'colors', 'fonts', or 'platforms' key")
         return v
 
-    @validator('platforms')
-    def validate_platforms(cls, v):
-        valid_platforms = ['facebook', 'instagram', 'linkedin', 'twitter', 'tiktok', 'youtube', 'pinterest']
-        if v:
-            for platform in v:
-                if platform not in valid_platforms:
-                    raise ValueError(f'Invalid platform: {platform}')
-        return v
 
 class BrandIdentityUpdate(BaseModel):
     """Schema for updating an existing brand identity"""
@@ -42,12 +38,10 @@ class BrandIdentityUpdate(BaseModel):
     ad_frequency: Optional[str] = None
     team_size: Optional[int] = None
     monthly_budget: Optional[int] = None
-    brand_colors: Optional[List[str]] = None
-    preferred_fonts: Optional[List[str]] = None
-    platforms: Optional[List[str]] = None
+    brand_colors: Optional[Dict[str, List[str]]] = None
+    preferred_fonts: Optional[Dict[str, List[str]]] = None
+    platforms: Optional[Dict[str, List[str]]] = None
 
-    _validate_ad_frequency = validator('ad_frequency', allow_reuse=True)(BrandIdentityCreate.validate_ad_frequency)
-    _validate_platforms = validator('platforms', allow_reuse=True)(BrandIdentityCreate.validate_platforms)
 
 class BrandIdentityResponse(BaseModel):
     """Schema for brand identity response"""
@@ -60,11 +54,17 @@ class BrandIdentityResponse(BaseModel):
     ad_frequency: Optional[str] = None
     team_size: Optional[int] = None
     monthly_budget: Optional[int] = None
-    brand_colors: Optional[List[str]] = None
-    preferred_fonts: Optional[List[str]] = None
-    platforms: Optional[List[str]] = None
+    brand_colors: Optional[Dict[str, List[str]]] = None
+    preferred_fonts: Optional[Dict[str, List[str]]] = None
+    platforms: Optional[Dict[str, List[str]]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+        
+    @validator('brand_colors', 'preferred_fonts', 'platforms', pre=True)
+    def validate_array_fields(cls, v):
+        if isinstance(v, dict):
+            return v
+        return None 
