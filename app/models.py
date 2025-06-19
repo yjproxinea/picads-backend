@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import JSON, UUID, DateTime, Integer, String, Text
+from sqlalchemy import JSON, UUID, Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -42,6 +42,8 @@ class UsageLog(Base):
     ad_type: Mapped[str] = mapped_column(String, nullable=False)
     credits_used: Mapped[int] = mapped_column(Integer, nullable=False)
     source: Mapped[str] = mapped_column(String, default="api_generation")
+    is_draft: Mapped[bool] = mapped_column(Boolean, default=True)  # New field: True for preview, False when saved
+    ad_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)  # Link to UserAds
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     extra_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # JSONB in Supabase
 
@@ -57,6 +59,7 @@ class UserAds(Base):
     size: Mapped[int] = mapped_column(Integer, nullable=False)
     mime_type: Mapped[str] = mapped_column(String, nullable=False)
     tags: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Text field, not array
+    is_draft: Mapped[bool] = mapped_column(Boolean, default=True)  # New field: True for preview, False when saved
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
 
