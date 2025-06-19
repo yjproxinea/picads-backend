@@ -523,8 +523,12 @@ class BrandIdentityService:
         # Update fields if provided in brand_data
         update_data = brand_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
-            if field in ['brand_colors', 'preferred_fonts', 'platforms'] and value is not None:
-                setattr(db_brand, field, {field.split('_')[-1]: value})
+            if field == 'website_url' and value is not None:
+                # Convert HttpUrl to string
+                setattr(db_brand, field, str(value))
+            elif field in ['brand_colors', 'preferred_fonts', 'platforms'] and value is not None:
+                # Set JSON fields directly without double-wrapping
+                setattr(db_brand, field, value)
             else:
                 setattr(db_brand, field, value)
         

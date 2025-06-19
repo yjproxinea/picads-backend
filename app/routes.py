@@ -635,6 +635,34 @@ async def get_asset(
         raise HTTPException(status_code=403, detail="Not authorized to access this asset")
     return asset
 
+@router.get("/assets/{asset_id}/download")
+async def download_asset(
+    asset_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Download an asset file"""
+    from fastapi.responses import Response
+    
+    asset = await AssetService.get_asset(db=db, asset_id=asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    if asset.user_id != uuid.UUID(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to access this asset")
+    
+    # Download file from storage
+    file_content = storage.download_file(asset.file_path, "assets")
+    if not file_content:
+        raise HTTPException(status_code=404, detail="File not found in storage")
+    
+    return Response(
+        content=file_content,
+        media_type=asset.mime_type,
+        headers={
+            "Content-Disposition": f"attachment; filename={asset.original_filename}"
+        }
+    )
+
 @router.get("/assets", response_model=List[UserAssetResponse])
 async def list_assets(
     asset_type: Optional[str] = None,

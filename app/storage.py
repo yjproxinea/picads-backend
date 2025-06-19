@@ -73,6 +73,43 @@ class StorageService:
             print(f"Failed to upload file: {e}")
             return None
     
+    def download_file(self, path: str, bucket: str = "assets") -> Optional[bytes]:
+        """
+        Download a file from storage
+        
+        Args:
+            path: The path of the file to download
+            bucket: The bucket containing the file
+            
+        Returns:
+            The file content as bytes, or None if download failed
+        """
+        try:
+            # Download from Supabase Storage
+            result = self.supabase.storage.from_(bucket).download(path)
+            return result
+            
+        except Exception as e:
+            print(f"Failed to download file: {e}")
+            return None
+    
+    def get_file_url(self, path: str, bucket: str = "assets") -> Optional[str]:
+        """
+        Get the public URL of a file
+        
+        Args:
+            path: The path of the file
+            bucket: The bucket containing the file
+            
+        Returns:
+            The public URL of the file, or None if failed
+        """
+        try:
+            return self.supabase.storage.from_(bucket).get_public_url(path)
+        except Exception as e:
+            print(f"Failed to get file URL: {e}")
+            return None
+    
     def delete_file(self, path: str, bucket: str = "assets") -> bool:
         """
         Delete a file from storage
