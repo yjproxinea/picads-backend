@@ -155,7 +155,7 @@ class AdGenerationService:
             await self.db.commit()
             
             # 8. Get the file URL for download
-            file_url = storage.get_file_url(ad.file_path, "assets")
+            file_url = storage.get_file_url(ad.file_path, "ads")
             
             # 9. Prepare response
             response = {
@@ -302,14 +302,14 @@ class AdGenerationService:
             content_bytes = content.encode('utf-8')
             
             # Upload directly to Supabase Storage
-            result = storage.supabase.storage.from_("assets").upload(
+            result = storage.supabase.storage.from_("ads").upload(
                 file_path,
                 content_bytes,
                 file_options={"contentType": content_type}
             )
 
             if result:
-                file_url = storage.supabase.storage.from_("assets").get_public_url(file_path)
+                file_url = storage.supabase.storage.from_("ads").get_public_url(file_path)
             else:
                 raise Exception("Failed to upload ad content to storage")
 

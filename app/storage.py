@@ -24,7 +24,7 @@ class StorageService:
     
     def _ensure_buckets_exist(self) -> None:
         """Ensure required storage buckets exist"""
-        required_buckets = ['assets']
+        required_buckets = ['assets', 'ads']
         existing_buckets = self.supabase.storage.list_buckets()
         existing_bucket_names = [b.name for b in existing_buckets]
         
