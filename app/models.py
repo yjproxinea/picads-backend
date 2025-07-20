@@ -103,3 +103,32 @@ class BrandIdentity(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=datetime.utcnow)
+
+
+class UserKeys(Base):
+    __tablename__ = "user_keys"
+    __table_args__ = {'schema': schema}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    
+    # Platform and key information
+    platform: Mapped[str] = mapped_column(String, nullable=False)  # 'facebook', 'instagram', 'tiktok', 'twitter', 'linkedin', etc.
+    api_key: Mapped[str] = mapped_column(String, nullable=False)  # Primary API key/client ID
+    api_secret: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # API secret/client secret
+    access_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # OAuth access token
+    refresh_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # OAuth refresh token
+    
+    # Validity and status
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_to: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)  # NULL means no expiration
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Additional metadata
+    scopes: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # OAuth scopes granted
+    platform_user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # User ID on the platform
+    platform_username: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Username on the platform
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=datetime.utcnow)
