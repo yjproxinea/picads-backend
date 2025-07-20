@@ -4,6 +4,7 @@ from .brand import BrandIdentityService
 from .credits import CreditsService, get_user_credits_summary
 from .generation import AdGenerationService
 from .profile import ProfileService
+from .social_media import SocialMediaApiKeyService
 from .stripe import StripeService
 
 # Export all services for easy importing
@@ -14,5 +15,6 @@ __all__ = [
     "StripeService",
     "AdGenerationService",
     "BrandIdentityService",
-    "AssetService"
+    "AssetService",
+    "SocialMediaApiKeyService"
 ] 

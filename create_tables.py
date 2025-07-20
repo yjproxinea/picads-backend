@@ -16,20 +16,25 @@ from sqlalchemy import text
 parser = argparse.ArgumentParser(description='Create database tables with specified env file')
 parser.add_argument('--env', type=str, help='Path to environment file', default='.env')
 parser.add_argument('--enable-rls', action='store_true', help='Enable Row Level Security policies')
+parser.add_argument('--no-env-file', action='store_true', help='Skip loading env file (use system env vars)')
 args = parser.parse_args()
 
-# Load specified env file
-env_path = args.env
-if not os.path.exists(env_path):
-    print(f"Error: Environment file {env_path} not found")
-    exit(1)
-
-load_dotenv(env_path)
+# Load environment variables
+if args.no_env_file:
+    print("🔧 Using system environment variables (no .env file)")
+else:
+    env_path = args.env
+    if not os.path.exists(env_path):
+        print(f"⚠️  Environment file {env_path} not found - falling back to system environment variables")
+        print("   (This is normal for cloud deployments like Render)")
+    else:
+        print(f"📄 Loading environment from {env_path}")
+        load_dotenv(env_path)
 
 # Import after loading env
 from app.config import settings
 from app.database import Base, engine
-from app.models import Credits, Profile, UsageLog, UserAds, UserAssets
+from app.models import Credits, Profile, UsageLog, UserAds, UserAssets, UserKeys
 
 
 def mask_password(url):
@@ -146,6 +151,11 @@ async def setup_rls_policies(conn, schema: str):
             'name': 'brand_identities',
             'user_column': 'user_id',
             'description': 'Brand identities - users can only access their own brand identities'
+        },
+        {
+            'name': 'user_keys',
+            'user_column': 'user_id',
+            'description': 'User API keys - users can only access their own API keys'
         }
     ]
     
@@ -188,38 +198,32 @@ async def setup_rls_policies(conn, schema: str):
             select_policy = f"""
             CREATE POLICY policy_select_{table_name} ON {full_table_name}
                 FOR SELECT 
-                USING (auth.uid() = {user_column});
+                USING ((SELECT auth.uid()) = {user_column});
             """
-            print(f"      🔍 Creating SELECT policy for {table_name}")
             await conn.execute(text(select_policy))
-            print(f"      ✅ SELECT policy created for {table_name}")
-            
+
             # INSERT policy - users can insert their own data
             insert_policy = f"""
             CREATE POLICY policy_insert_{table_name} ON {full_table_name}
                 FOR INSERT 
-                WITH CHECK (auth.uid() = {user_column});
+                WITH CHECK ((SELECT auth.uid()) = {user_column});
             """
-            print(f"      🔍 Creating INSERT policy for {table_name}")
             await conn.execute(text(insert_policy))
-            print(f"      ✅ INSERT policy created for {table_name}")
-            
+
             # UPDATE policy - users can update their own data
             update_policy = f"""
             CREATE POLICY policy_update_{table_name} ON {full_table_name}
                 FOR UPDATE 
-                USING (auth.uid() = {user_column})
-                WITH CHECK (auth.uid() = {user_column});
+                USING ((SELECT auth.uid()) = {user_column})
+                WITH CHECK ((SELECT auth.uid()) = {user_column});
             """
-            print(f"      🔍 Creating UPDATE policy for {table_name}")
             await conn.execute(text(update_policy))
-            print(f"      ✅ UPDATE policy created for {table_name}")
-            
+
             # DELETE policy - users can delete their own data
             delete_policy = f"""
             CREATE POLICY policy_delete_{table_name} ON {full_table_name}
                 FOR DELETE 
-                USING (auth.uid() = {user_column});
+                USING ((SELECT auth.uid()) = {user_column});
             """
             print(f"      🔍 Creating DELETE policy for {table_name}")
             await conn.execute(text(delete_policy))
@@ -268,6 +272,7 @@ async def reset_database():
             
             # Drop tables in reverse order to handle dependencies
             tables_to_drop = [
+                'user_keys',
                 'user_assets',
                 'user_ads',
                 'usage_logs', 
@@ -302,6 +307,7 @@ async def reset_database():
             print(f"   - user_ads (schema: {schema})")
             print(f"   - user_assets (schema: {schema})")
             print(f"   - brand_identities (schema: {schema})")
+            print(f"   - user_keys (schema: {schema})")
             # Setup RLS if requested
             if args.enable_rls:
                 print("\n" + "=" * 60)

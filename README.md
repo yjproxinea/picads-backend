@@ -178,7 +178,42 @@ DBNAME=your_db_name
 
 ### 3. Database Setup
 
-The application uses Supabase PostgreSQL. The database tables will be created automatically when you first run the application.
+The application uses Supabase PostgreSQL with automatic table creation and Row Level Security setup.
+
+#### **Development Setup**
+
+```bash
+# Create tables with RLS policies (recommended)
+python create_tables.py --enable-rls
+
+# Or without RLS
+python create_tables.py
+```
+
+#### **Cloud Deployment**
+
+For cloud deployments (Render, Heroku, etc.), the script automatically uses system environment variables:
+
+```bash
+# Works automatically on cloud platforms
+python create_tables.py --enable-rls
+# No .env file needed - uses system environment variables
+```
+
+#### **Script Features**
+
+- ✅ **Environment Flexible**: Works with `.env` files or system variables
+- ✅ **RLS Support**: `--enable-rls` flag creates comprehensive security policies
+- ✅ **Connection Testing**: Verifies database connection before creating tables
+- ✅ **Graceful Fallback**: No errors if `.env` file is missing
+- ✅ **Transaction Safety**: All operations run in transactions
+
+**Available Options:**
+```bash
+--env PATH          # Specify custom .env file path (default: .env)
+--enable-rls        # Enable Row Level Security policies
+--no-env-file       # Skip .env file and use system environment variables
+```
 
 **Important**: The application uses `NullPool` to avoid event loop conflicts during testing. This is automatically configured.
 
@@ -368,6 +403,80 @@ For schema changes, you can:
 3. Or recreate tables for development
 
 ## Production Deployment
+
+### Cloud Deployment (Render, Heroku, etc.)
+
+The backend is optimized for cloud deployment with automatic database setup:
+
+#### **Render Deployment with Poetry**
+
+**Build Command:**
+```bash
+poetry install
+```
+
+**Start Command:**
+```bash
+poetry run python create_tables.py --enable-rls && poetry run gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+```
+
+**Environment Variables** (set in Render dashboard):
+```bash
+# Environment
+ENVIRONMENT=development
+
+# Database Components  
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_HOST=your_db_host
+DB_PORT=5432
+DB_NAME=your_db_name
+
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_JWT_SECRET=your_jwt_secret
+
+# Stripe (Test Mode)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Frontend URL for redirects
+FRONTEND_URL=https://your-frontend.vercel.app
+```
+
+#### **Database Auto-Setup on Deployment**
+
+The `create_tables.py` script now supports cloud deployment:
+
+- ✅ **Local Development**: Uses `.env` files when present
+- ✅ **Cloud Deployment**: Automatically uses system environment variables
+- ✅ **Graceful Fallback**: No errors if `.env` file is missing
+- ✅ **RLS Support**: `--enable-rls` flag enables Row Level Security policies
+
+**Deployment Flow:**
+1. **Git push** triggers deployment
+2. **Build**: `poetry install` installs dependencies
+3. **Start**: 
+   - `python create_tables.py --enable-rls` sets up fresh database
+   - `gunicorn` starts the API server
+4. **Result**: Fresh database with all tables and RLS policies ✅
+
+#### **Create Tables Script Options**
+
+```bash
+# Local development (uses .env file)
+python create_tables.py --enable-rls
+
+# Cloud deployment (uses system env vars)
+python create_tables.py --enable-rls --no-env-file
+
+# Automatic fallback (recommended)
+python create_tables.py --enable-rls
+# Will use .env if present, otherwise system env vars
+```
 
 ### Environment Configuration
 
@@ -1044,3 +1153,190 @@ backend/
 ```
 
 **🎉 You're now ready to use Poetry for modern Python dependency management!**
+
+---
+
+## 🚀 Complete Deployment Guide
+
+### **Local Development → Render Deployment**
+
+#### **Step 1: Local Development Setup**
+```bash
+# 1. Install Poetry and dependencies
+cd backend
+poetry install
+
+# 2. Setup environment variables
+cp env.example .env
+# Edit .env with your Supabase credentials
+
+# 3. Initialize database locally
+poetry run python create_tables.py --enable-rls
+
+# 4. Start development server
+poetry run python main.py
+```
+
+#### **Step 2: Render Deployment Configuration**
+
+**In Render Dashboard:**
+
+1. **Service Type**: Web Service
+2. **Runtime**: Python 3
+3. **Build Command**: `poetry install`
+4. **Start Command**: `poetry run python create_tables.py --enable-rls && poetry run gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT`
+
+**Environment Variables** (set in Render dashboard):
+```bash
+ENVIRONMENT=development
+DB_USER=your_supabase_user
+DB_PASSWORD=your_supabase_password
+DB_HOST=your_supabase_host
+DB_PORT=5432
+DB_NAME=postgres
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_JWT_SECRET=your-jwt-secret
+FRONTEND_URL=https://your-frontend.vercel.app
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+#### **Step 3: Frontend Integration**
+
+**Deploy frontend to Vercel with environment variables:**
+```bash
+VITE_API_BASE_URL=https://your-backend.onrender.com
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### **Step 4: Supabase Configuration**
+
+**Update Supabase Auth URLs:**
+1. Go to Supabase Dashboard → Authentication → URL Configuration
+2. **Site URL**: `https://your-frontend.vercel.app`
+3. **Redirect URLs**: Add your Vercel deployment URL patterns
+
+#### **Step 5: Stripe Webhook Configuration**
+
+**For deployed environment (no Stripe CLI needed):**
+1. Go to Stripe Dashboard → Developers → Webhooks
+2. **Add endpoint**: `https://your-backend.onrender.com/webhook`
+3. **Select events**: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`
+4. **Copy webhook secret** and add to Render environment variables
+
+### **Deployment Architecture**
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend       │    │   Database      │
+│   (Vercel)      │────│    (Render)      │────│   (Supabase)    │
+│                 │    │                  │    │                 │
+│ • React/Vite    │    │ • FastAPI        │    │ • PostgreSQL    │
+│ • Supabase Auth │    │ • Poetry         │    │ • RLS Policies  │
+│ • Environment   │    │ • Auto DB Setup  │    │ • Real-time     │
+│   Variables     │    │ • System Env     │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                        │                        
+         │              ┌──────────────────┐               
+         │              │     Stripe       │               
+         └──────────────│   (Webhooks)     │               
+                        │                  │               
+                        │ • Direct HTTP    │               
+                        │ • No CLI needed  │               
+                        └──────────────────┘               
+```
+
+### **Testing Deployment**
+
+#### **Step 1: Backend Health Check**
+```bash
+curl https://your-backend.onrender.com/
+# Should return: {"message": "Welcome to Picads Backend API"}
+
+curl https://your-backend.onrender.com/docs
+# Should show FastAPI documentation
+```
+
+#### **Step 2: Frontend Integration Test**
+1. Visit your Vercel frontend URL
+2. Try signup/login (should work with Supabase Auth)
+3. Check browser network tab for API calls to Render backend
+4. Complete payment flow (Stripe should redirect properly)
+
+#### **Step 3: Database Verification**
+Check Render logs for database setup:
+```
+🚀 Database Reset Script with Enhanced Debugging and RLS Support
+✅ Successfully recreated all database tables
+🔐 Row Level Security setup complete!
+```
+
+### **Common Deployment Issues & Solutions**
+
+#### **Environment Variables Not Loading**
+```bash
+# ❌ Problem: create_tables.py fails with "Environment file .env not found"
+# ✅ Solution: Already fixed! Script automatically uses system env vars
+
+# Check Render logs for:
+🔧 Using system environment variables (no .env file)
+```
+
+#### **Database Connection Issues**
+```bash
+# Check Render environment variables:
+# - DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
+# - Make sure they match your Supabase connection details
+
+# Test connection in Render logs:
+🔍 Step 5: Testing actual connection...
+✅ Connection successful!
+```
+
+#### **CORS/Frontend Connection Issues**
+```bash
+# Backend main.py already allows all origins:
+allow_origins=["*"]  # Temporary for development
+
+# For production, update CORS with specific origins
+```
+
+#### **Stripe Webhook Issues**
+```bash
+# ❌ Local: stripe listen --forward-to localhost:8000/webhook
+# ✅ Deployed: Direct webhook to https://your-backend.onrender.com/webhook
+
+# Make sure STRIPE_WEBHOOK_SECRET matches dashboard secret
+```
+
+### **Monitoring & Maintenance**
+
+#### **Render Logs**
+```bash
+# View deployment logs
+https://dashboard.render.com → Your Service → Logs
+
+# Look for:
+✅ Database setup successful
+✅ Server started on 0.0.0.0:10000
+```
+
+#### **Database Monitoring**
+```bash
+# Check Supabase dashboard for:
+# - Connection count
+# - Query performance
+# - RLS policy usage
+```
+
+#### **Performance Optimization**
+```bash
+# For production:
+# 1. Remove NullPool from database.py
+# 2. Add proper connection pooling
+# 3. Set up database monitoring
+# 4. Configure proper logging
+```

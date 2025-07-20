@@ -7,6 +7,7 @@ from .core import router as core_router
 from .credits import router as credits_router
 from .generation import router as generation_router
 from .profile import router as profile_router
+from .social_media import router as social_media_router
 from .subscription import router as subscription_router
 
 # Create main router
@@ -19,6 +20,7 @@ router.include_router(ads_router, prefix="/ads", tags=["ads"])
 router.include_router(credits_router, prefix="/credits", tags=["credits"])
 router.include_router(assets_router, prefix="/assets", tags=["assets"])
 router.include_router(brand_router, prefix="/brand-identity", tags=["brand"])
+router.include_router(social_media_router, prefix="/social-media", tags=["social-media"])
 router.include_router(subscription_router, tags=["subscription"])
 
 # Include ad generation routes at root level (they have their own prefixes)
